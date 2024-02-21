@@ -175,48 +175,6 @@ def response_repos_info():
         print(Fore.RED + f" Native API request failed with status code {response.status_code}: {response.text}")
     return (pd.json_normalize([item for item in response_json]))
 
-# def df_to_xls(df):
-#     df_columns = ['Supported', 'provider', 'type', 'privacyLevel', 'repositorySize', 'workspaceName', 'name', 'defaultBranch',
-#                  'categorizedTechnologies', 'Technology', 'percentage', 'detectedDate',
-#                  'severitySum', 'issues.type',
-#                  'SAST.CRITICAL', 'SAST.HIGH', 'SAST.MEDIUM', 'SAST.LOW', 'SAST.INFO',
-#                  'CICD.CRITICAL', 'CICD.HIGH', 'CICD.MEDIUM', 'CICD.LOW', 'CICD.INFO',
-#                  'SCA.CRITICAL', 'SCA.HIGH', 'SCA.MEDIUM', 'SCA.LOW', 'SCA.INFO',
-#                  'IAC.CRITICAL', 'IAC.HIGH', 'IAC.MEDIUM', 'IAC.LOW', 'IAC.INFO',
-#                  'SECRETS.CRITICAL', 'SECRETS.HIGH', 'SECRETS.MEDIUM', 'SECRETS.LOW', 'SECRETS.INFO',
-#                  'branchName', 'contributorsCount', 'contributors.name-contributionsCounts',
-#                  'totalCommitsCount', 'currWeeklyCommits', 'lastUpdated', 'isArchived', 'url']
-    # # Initialize DataFrame
-    # to_xls = pd.DataFrame(columns=df_columns)
-    # to_xls.loc[:] = None
-    #
-    # # Copy values from the original DataFrame
-    # to_xls['type'] = df['type']
-    # to_xls['totalCommitsCount'] = df['totalCommitsCount']
-    # to_xls['isArchived'] = df['isArchived']
-    # to_xls['defaultBranch'] = df['defaultBranch']
-    # to_xls['severitySum'] = df['severitySum']
-    # to_xls['url'] = df['url']
-    # to_xls['repositorySize'] = df['repositorySize']
-    # to_xls['lastUpdated'] = df['lastUpdated']
-    # to_xls['provider'] = df['provider']
-    # to_xls['name'] = df['name']
-    # to_xls['privacyLevel'] = df['privacyLevel']
-    # to_xls['contributorsCount'] = df['contributorsCount']
-    # to_xls['workspaceName'] = df['workspaceName']
-    # # Iterate over each repository entry in the original DataFrame
-    # for index, row in df.iterrows():
-    #     # Copy repository values to a new row for each technology entry
-    #     for category, technologies in row['categorizedTechnologies'].items():
-    #         for technology, details in technologies.items():
-    #             new_row = row.copy()
-    #             new_row['Technology'] = technology
-    #             new_row['detectedDate'] = details['detectedDate']
-    #             new_row['percentage'] = details['percentage']
-    #             new_row['category'] = category
-    #             # Append the new row to the DataFrame
-    #             to_xls = to_xls.append(new_row, ignore_index=True)
-
 def df_to_xls(df):
     to_xls = pd.DataFrame(columns=['type', 'totalCommitsCount', 'contributorsCount', 'defaultBranch',
                                    'provider', 'name',
