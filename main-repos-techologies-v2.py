@@ -38,7 +38,7 @@ requests.packages.urllib3.disable_warnings()
 s = requests.Session()
 s.timeout = 120
 # Create a session with retry logic
-# Include 400/500-level status codes (e.g., 400 Bad Request) in the retry mechanism
+# Include 400-level status codes (e.g., 400 Bad Request) in the retry mechanism
 retries = Retry(total=10, backoff_factor=0.1, status_forcelist=[400, 500, 502, 503, 504])
 s.mount('http://', HTTPAdapter(max_retries=retries))
 s.mount('https://', HTTPAdapter(max_retries=retries))
@@ -47,6 +47,11 @@ start_time = time.time()
 
 global random_number # debugging
 random_number = random.randint(1000, 9999)
+
+# Declare Dataframe columns for AWS and Azure based on columns templates in Excel file
+# global reposdfcolumns
+# reposdfcolumns = ['Supported', 'provider', 'type', 'privacyLevel', 'repositorySize', 'workspaceName', 'name', 'defaultBranch', 'categorizedTechnologies', 'Technology', 'percentage', 'detectedDate', 'severitySum', 'issues.type', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO', 'branchName', 'contributorsCount', 'contributors.name-contributionsCounts', 'totalCommitsCount', 'currWeeklyCommits', 'lastUpdated', 'isArchived', 'url']
+
 
 # Define a function to load API configuration from an INI file
 def load_api_config(iniFilePath):
@@ -203,11 +208,15 @@ def df_to_xls(df):
                         technology = parts[2]
                         detected_date_column = f'categorizedTechnologies.{category}.{technology}.detectedDate'
                         detected_date = row.get(detected_date_column)
+                        # Extract contributor names from the list of contributors and join them into a comma-separated string
+                        contributor_names = ','.join(contributor.get('name', '') for contributor in row.get('contributors', []))
+                        print(contributor_names)
                         if detected_date:
                             percentage_column = f'categorizedTechnologies.{category}.{technology}.percentage'
                             percentage = row.get(percentage_column)
                             supported = 'Yes' if (category != "Programming" and category != "PackageManager" and category != "Devops") else (
                                 'Yes' if technology in supported_Programming or technology in supported_PackageManager or technology in supported_Devops else 'No')
+
                             data.append({
                                 'type': row['privacyLevel'],
                                 'provider': row['provider'],
@@ -227,6 +236,7 @@ def df_to_xls(df):
                                 'defaultBranch': row['defaultBranch'],
                                 'totalCommitsCount': row['totalCommitsCount'],
                                 'contributorsCount': row['contributorsCount'],
+                                'contributors': contributor_names,
                                 'detectedDate': detected_date,
                                 'lastUpdated': row['lastUpdated'],
                                 'issues.SCA.CRITICAL': row.get('issues.SCA.CRITICAL', 0),  # Replace NaN with 0
@@ -291,15 +301,13 @@ def df_to_xls(df):
 
     return to_xls
 
-
-
 # to_xls = df_to_xls(df)
 
 def get_repos():
     global random_number
     # Define a function to append non-empty dataframes to the output
     df = response_repos_info()
-    df.to_csv(f"debug-df-{random_number}.csv", index=False)
+    # df.to_csv(f"debug-df-{random_number}.csv", index=False)
     result_repos = df_to_xls(df)
     # Debugging, please ignore
     # result_repos.to_csv(f"debug-result_repos{random_number}.csv", index=False)
@@ -307,7 +315,7 @@ def get_repos():
 
 # Main script run
 # Load API configuration from the INI file
-api_config = load_api_config("API_config.ini")
+api_config = load_api_config("API_config-pso.ini")
 # Perform the first API call for authentication and store the token
 token = login(api_config)
 api_config['Token'] = token
