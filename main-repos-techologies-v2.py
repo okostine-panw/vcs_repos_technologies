@@ -36,7 +36,7 @@ file_name_repos = f"Code-repos-technologies-{datetime.now().strftime('%Y-%m-%dT%
 # Disable urllib3 warnings to avoid warnings when using requests (useful when working with proxies)
 requests.packages.urllib3.disable_warnings()
 s = requests.Session()
-s.timeout = 1200
+s.timeout = 120
 # Create a session with retry logic
 # Include 400/500-level status codes (e.g., 400 Bad Request) in the retry mechanism
 retries = Retry(total=10, backoff_factor=0.1, status_forcelist=[400, 500, 502, 503, 504])
@@ -45,13 +45,8 @@ s.mount('https://', HTTPAdapter(max_retries=retries))
 # s.verify = 'test.crt' # Include your cert bundle here if using a proxy/vpn
 start_time = time.time()
 
-global random_number
+global random_number # debugging
 random_number = random.randint(1000, 9999)
-
-# Declare Dataframe columns for AWS and Azure based on columns templates in Excel file
-global reposdfcolumns
-reposdfcolumns = ['Supported', 'provider', 'type', 'privacyLevel', 'repositorySize', 'workspaceName', 'name', 'defaultBranch', 'categorizedTechnologies', 'Technology', 'percentage', 'detectedDate', 'severitySum', 'issues.type', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO', 'branchName', 'contributorsCount', 'contributors.name-contributionsCounts', 'totalCommitsCount', 'currWeeklyCommits', 'lastUpdated', 'isArchived', 'url']
-
 
 # Define a function to load API configuration from an INI file
 def load_api_config(iniFilePath):
