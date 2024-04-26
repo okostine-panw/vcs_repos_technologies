@@ -36,13 +36,13 @@ file_name_repos = f"Code-repos-technologies-{datetime.now().strftime('%Y-%m-%dT%
 # Disable urllib3 warnings to avoid warnings when using requests (useful when working with proxies)
 requests.packages.urllib3.disable_warnings()
 s = requests.Session()
-s.timeout = 12000
+s.timeout = 1200
 # Create a session with retry logic
-# Include 400-level status codes (e.g., 400 Bad Request) in the retry mechanism
+# Include 400/500-level status codes (e.g., 400 Bad Request) in the retry mechanism
 retries = Retry(total=10, backoff_factor=0.1, status_forcelist=[400, 500, 502, 503, 504])
 s.mount('http://', HTTPAdapter(max_retries=retries))
 s.mount('https://', HTTPAdapter(max_retries=retries))
-# s.verify = 'test.crt'
+# s.verify = 'test.crt' # Include your cert bundle here if using a proxy/vpn
 start_time = time.time()
 
 global random_number
