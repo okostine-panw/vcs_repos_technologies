@@ -30,8 +30,13 @@ pd.set_option('display.max_colwidth', None)
 # Supress the SettingWithCopyWarning pandas warning
 pd.set_option('mode.chained_assignment', None)
 
+py_filename = os.path.basename(__file__)
+
+instance = 'pso'
+
 # Define file names
-file_name_repos = f"Code-repos-technologies-{datetime.now().strftime('%Y-%m-%dT%H-%M-%S')}.csv"
+# file_name_repos = f"Code-repos-technologies-{datetime.now().strftime('%Y-%m-%dT%H-%M-%S')}.csv"
+file_name_repos = f"{py_filename}-{instance}-Code-repos-technologies_{datetime.now().strftime('%Y%m%d%H%M')}.csv"
 
 # Disable urllib3 warnings to avoid warnings when using requests (useful when working with proxies)
 requests.packages.urllib3.disable_warnings()
@@ -208,12 +213,14 @@ def df_to_xls(df):
                         technology = parts[2]
                         detected_date_column = f'categorizedTechnologies.{category}.{technology}.detectedDate'
                         detected_date = row.get(detected_date_column)
+                        # print(f"{name}-{category}-{technology} Percentage: {detected_date}")
+
                         # Extract contributor names from the list of contributors and join them into a comma-separated string
                         contributor_names = ','.join(contributor.get('name', '') for contributor in row.get('contributors', []))
-                        print(contributor_names)
-                        if detected_date:
+                        if not pd.isna(detected_date):
                             percentage_column = f'categorizedTechnologies.{category}.{technology}.percentage'
-                            percentage = row.get(percentage_column)
+                            percentage = round(row.get(percentage_column), 2)
+                            # print(f"{detected_date} {name}-{category}-{technology} Percentage:{percentage_column} -  {percentage} - {contributor_names}")
                             supported = 'Yes' if (category != "Programming" and category != "PackageManager" and category != "Devops") else (
                                 'Yes' if technology in supported_Programming or technology in supported_PackageManager or technology in supported_Devops else 'No')
 
@@ -226,10 +233,10 @@ def df_to_xls(df):
                                 'technology': technology,
                                 'Supported': supported,
                                 'percentage': percentage,
-                                'issues.IAC.TOTAL': row.get('issues.IAC.TOTAL'),
-                                'issues.SCA.TOTAL': row.get('issues.SCA.TOTAL'),
-                                'issues.SECRETS.TOTAL': row.get('issues.SECRETS.TOTAL'),
-                                'issues.SAST.TOTAL': row.get('issues.SAST.TOTAL'),
+                                'issues.IAC.TOTAL': int(row.get('issues.IAC.TOTAL')) if pd.notna(row.get('issues.IAC.TOTAL')) else 0,
+                                'issues.SCA.TOTAL': int(row.get('issues.SCA.TOTAL')) if pd.notna(row.get('issues.SCA.TOTAL')) else 0,
+                                'issues.SECRETS.TOTAL': int(row.get('issues.SECRETS.TOTAL')) if pd.notna(row.get('issues.SECRETS.TOTAL')) else 0,
+                                'issues.SAST.TOTAL': int(row.get('issues.SAST.TOTAL')) if pd.notna(row.get('issues.SAST.TOTAL')) else 0,
                                 'repositorySize': round(row['repositorySize'], 2),  # Round to 2 decimal digits
                                 'url': row['url'],
                                 'isArchived': row['isArchived'],
@@ -273,6 +280,7 @@ def df_to_xls(df):
                     'name': row['name'],
                     'privacyLevel': row['privacyLevel'],
                     'contributorsCount': row['contributorsCount'],
+                    'contributors': contributor_names,
                     'workspaceName': row['workspaceName'],
                     'detectedDate': row.get('detectedDate'),
                     'percentage': row.get('percentage'),
@@ -283,21 +291,12 @@ def df_to_xls(df):
         to_xls = to_xls[to_xls['detectedDate'].notna()]
         # Drop duplicates
         to_xls = to_xls.drop_duplicates()
-        # Remove trailing .0 for all columns
-        for column in to_xls.columns:
-            to_xls[column] = to_xls[column].apply(lambda x: str(x).rstrip('.0') if isinstance(x, float) else x)
 
-        # List of columns to exclude from replacement
-        total_columns = ['issues.SCA.TOTAL', 'issues.IAC.TOTAL', 'issues.SECRETS.TOTAL', 'issues.SAST.TOTAL']
-        # At the end of the df_to_xls function, before returning the DataFrame
-        to_xls.loc[:, to_xls.columns.difference(total_columns)] = to_xls.loc[:, to_xls.columns.difference(total_columns)].replace({0: '', 0.0: ''})
     else:
         # If there are no categorized technologies, return the original dataframe
         to_xls = df[df['detectedDate'].notna()]
         # Drop duplicates
         to_xls = to_xls.drop_duplicates()
-        # At the end of the df_to_xls function, before returning the DataFrame
-        to_xls.replace({0: '', 0.0: ''}, inplace=True)
 
     return to_xls
 
@@ -315,7 +314,7 @@ def get_repos():
 
 # Main script run
 # Load API configuration from the INI file
-api_config = load_api_config("API_config-pso.ini")
+api_config = load_api_config(f"API_config-{instance}.ini")
 # Perform the first API call for authentication and store the token
 token = login(api_config)
 api_config['Token'] = token
