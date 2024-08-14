@@ -181,7 +181,7 @@ def response_repos_info():
     return (pd.json_normalize([item for item in response_json]))
 
 def df_to_xls(df):
-    to_xls = pd.DataFrame(columns=['type', 'totalCommitsCount', 'contributorsCount', 'defaultBranch',
+    to_xls = pd.DataFrame(columns=['importanceScore', 'type', 'totalCommitsCount', 'contributorsCount', 'defaultBranch',
                                    'provider', 'name',
                                    'workspaceName', 'category', 'technology', 'detectedDate', 'percentage',
                                    'issues.SCA.TOTAL', 'issues.IAC.TOTAL', 'issues.SECRETS.TOTAL', 'issues.SAST.TOTAL',
@@ -190,6 +190,36 @@ def df_to_xls(df):
                                    'issues.IAC.CRITICAL', 'issues.IAC.HIGH', 'issues.IAC.MEDIUM', 'issues.IAC.LOW', 'issues.IAC.INFO',
                                    'issues.SECRETS.CRITICAL', 'issues.SECRETS.HIGH', 'issues.SECRETS.MEDIUM', 'issues.SECRETS.LOW', 'issues.SECRETS.INFO',
                                    'issues.SAST.CRITICAL', 'issues.SAST.HIGH', 'issues.SAST.MEDIUM', 'issues.SAST.LOW', 'issues.SAST.INFO'])
+    # from: https://github.com/bridgecrewio/checkov/blob/main/checkov/common/models/consts.py
+    # SUPPORTED_FILE_EXTENSIONS = [".tf", ".yml", ".yaml", ".json", ".template", ".bicep", ".hcl"]
+    # SUPPORTED_PACKAGE_FILES = {
+    #     "bower.json",
+    #     "build.gradle",
+    #     "build.gradle.kts",
+    #     "go.sum",
+    #     "gradle.properties",
+    #     "METADATA",
+    #     "npm-shrinkwrap.json",
+    #     "package.json",
+    #     "package-lock.json",
+    #     "pom.xml",
+    #     "requirements.txt"
+    # }
+    # SUPPORTED_FILES = SUPPORTED_PACKAGE_FILES.union({"Dockerfile"})
+    #
+    # DEPENDENCY_TREE_SUPPORTED_FILES = {"yarn.lock", "Gemfile", "Gemfile.lock", "go.mod", "paket.dependencies", "paket.lock", "packages.config", "composer.json", "composer.lock"}
+    #
+    # SCANNABLE_PACKAGE_FILES_EXTENSIONS = {".csproj"}
+    #
+    # SCANNABLE_PACKAGE_FILES = SUPPORTED_PACKAGE_FILES | DEPENDENCY_TREE_SUPPORTED_FILES
+    #
+    # SAST_SUPPORTED_FILE_EXTENSIONS = {
+    #     SastLanguages.JAVA: ['.java'],
+    #     SastLanguages.JAVASCRIPT: ['.js'],
+    #     SastLanguages.TYPESCRIPT: ['.ts'],
+    #     SastLanguages.PYTHON: ['.py'],
+    #     SastLanguages.GOLANG: ['.go']
+    # }
     supported_Programming = [
         "Java", "JavaScript", "Python", "Dockerfile", "PowerShell", "Shell", "Makefile","Android","TypeScript","Batchfile"
     ]
@@ -214,7 +244,12 @@ def df_to_xls(df):
                         detected_date_column = f'categorizedTechnologies.{category}.{technology}.detectedDate'
                         detected_date = row.get(detected_date_column)
                         # print(f"{name}-{category}-{technology} Percentage: {detected_date}")
-
+                        custom_repo_score = row.get('importanceScore.customRepoScore')
+                        repo_score_value = row.get('importanceScore.repoScore')
+                        if pd.notna(custom_repo_score):
+                            repo_score = custom_repo_score
+                        else:
+                            repo_score = repo_score_value
                         # Extract contributor names from the list of contributors and join them into a comma-separated string
                         contributor_names = ','.join(contributor.get('name', '') for contributor in row.get('contributors', []))
                         if not pd.isna(detected_date):
@@ -229,43 +264,44 @@ def df_to_xls(df):
                                 'provider': row['provider'],
                                 'workspaceName': row['workspaceName'],
                                 'name': row['name'],
+                                'importanceScore': repo_score,
                                 'category': category,
                                 'technology': technology,
                                 'Supported': supported,
                                 'percentage': percentage,
-                                'issues.IAC.TOTAL': int(row.get('issues.IAC.TOTAL')) if pd.notna(row.get('issues.IAC.TOTAL')) else 0,
-                                'issues.SCA.TOTAL': int(row.get('issues.SCA.TOTAL')) if pd.notna(row.get('issues.SCA.TOTAL')) else 0,
-                                'issues.SECRETS.TOTAL': int(row.get('issues.SECRETS.TOTAL')) if pd.notna(row.get('issues.SECRETS.TOTAL')) else 0,
-                                'issues.SAST.TOTAL': int(row.get('issues.SAST.TOTAL')) if pd.notna(row.get('issues.SAST.TOTAL')) else 0,
+                                'issues.IAC.TOTAL': '' if row.get('issues.IAC.TOTAL') == 0 else int(row.get('issues.IAC.TOTAL')) if pd.notna(row.get('issues.IAC.TOTAL')) else '',
+                                'issues.SCA.TOTAL': '' if row.get('issues.IAC.TOTAL') == 0 else int(row.get('issues.SCA.TOTAL')) if pd.notna(row.get('issues.SCA.TOTAL')) else '',
+                                'issues.SECRETS.TOTAL': '' if row.get('issues.IAC.TOTAL') == 0 else int(row.get('issues.SECRETS.TOTAL')) if pd.notna(row.get('issues.SECRETS.TOTAL')) else '',
+                                'issues.SAST.TOTAL': '' if row.get('issues.IAC.TOTAL') == 0 else int(row.get('issues.SAST.TOTAL')) if pd.notna(row.get('issues.SAST.TOTAL')) else '',
                                 'repositorySize': round(row['repositorySize'], 2),  # Round to 2 decimal digits
                                 'url': row['url'],
                                 'isArchived': row['isArchived'],
                                 'defaultBranch': row['defaultBranch'],
-                                'totalCommitsCount': row['totalCommitsCount'],
-                                'contributorsCount': row['contributorsCount'],
+                                'totalCommitsCount': '' if pd.isna(row['totalCommitsCount']) or row['totalCommitsCount'] == 0 else int(row['totalCommitsCount']),
+                                'contributorsCount': '' if pd.isna(row['contributorsCount']) or row['contributorsCount'] == 0 else int(row['contributorsCount']),
                                 'contributors': contributor_names,
                                 'detectedDate': detected_date,
                                 'lastUpdated': row['lastUpdated'],
-                                'issues.SCA.CRITICAL': row.get('issues.SCA.CRITICAL', 0),  # Replace NaN with 0
-                                'issues.SCA.HIGH': row.get('issues.SCA.HIGH', 0),
-                                'issues.SCA.MEDIUM': row.get('issues.SCA.MEDIUM', 0),
-                                'issues.SCA.LOW': row.get('issues.SCA.LOW', 0),
-                                'issues.SCA.INFO': row.get('issues.SCA.INFO', 0),
-                                'issues.IAC.CRITICAL': row.get('issues.IAC.CRITICAL', 0),
-                                'issues.IAC.HIGH': row.get('issues.IAC.HIGH', 0),
-                                'issues.IAC.MEDIUM': row.get('issues.IAC.MEDIUM', 0),
-                                'issues.IAC.LOW': row.get('issues.IAC.LOW', 0),
-                                'issues.IAC.INFO': row.get('issues.IAC.INFO', 0),
-                                'issues.SECRETS.CRITICAL': row.get('issues.SECRETS.CRITICAL', 0),
-                                'issues.SECRETS.HIGH': row.get('issues.SECRETS.HIGH', 0),
-                                'issues.SECRETS.MEDIUM': row.get('issues.SECRETS.MEDIUM', 0),
-                                'issues.SECRETS.LOW': row.get('issues.SECRETS.LOW', 0),
-                                'issues.SECRETS.INFO': row.get('issues.SECRETS.INFO', 0),
-                                'issues.SAST.CRITICAL': row.get('issues.SAST.CRITICAL', 0),
-                                'issues.SAST.HIGH': row.get('issues.SAST.HIGH', 0),
-                                'issues.SAST.MEDIUM': row.get('issues.SAST.MEDIUM', 0),
-                                'issues.SAST.LOW': row.get('issues.SAST.LOW', 0),
-                                'issues.SAST.INFO': row.get('issues.SAST.INFO', 0),
+                                'issues.SCA.CRITICAL': '' if pd.isna(row.get('issues.SCA.CRITICAL', 0)) or row.get('issues.SCA.CRITICAL', 0) == 0 else int(row.get('issues.SCA.CRITICAL', 0)),
+                                'issues.SCA.HIGH': '' if pd.isna(row.get('issues.SCA.HIGH', 0)) or row.get('issues.SCA.HIGH', 0) == 0 else int(row.get('issues.SCA.HIGH', 0)),
+                                'issues.SCA.MEDIUM': '' if pd.isna(row.get('issues.SCA.MEDIUM', 0)) or row.get('issues.SCA.MEDIUM', 0) == 0 else int(row.get('issues.SCA.MEDIUM', 0)),
+                                'issues.SCA.LOW': '' if pd.isna(row.get('issues.SCA.LOW', 0)) or row.get('issues.SCA.LOW', 0) == 0 else int(row.get('issues.SCA.LOW', 0)),
+                                'issues.SCA.INFO': '' if pd.isna(row.get('issues.SCA.INFO', 0)) or row.get('issues.SCA.INFO', 0) == 0 else int(row.get('issues.SCA.INFO', 0)),
+                                'issues.IAC.CRITICAL': '' if pd.isna(row.get('issues.IAC.CRITICAL', 0)) or row.get('issues.IAC.CRITICAL', 0) == 0 else int(row.get('issues.IAC.CRITICAL', 0)),
+                                'issues.IAC.HIGH': '' if pd.isna(row.get('issues.IAC.HIGH', 0)) or row.get('issues.IAC.HIGH', 0) == 0 else int(row.get('issues.IAC.HIGH', 0)),
+                                'issues.IAC.MEDIUM': '' if pd.isna(row.get('issues.IAC.MEDIUM', 0)) or row.get('issues.IAC.MEDIUM', 0) == 0 else int(row.get('issues.IAC.MEDIUM', 0)),
+                                'issues.IAC.LOW': '' if pd.isna(row.get('issues.IAC.LOW', 0)) or row.get('issues.IAC.LOW', 0) == 0 else int(row.get('issues.IAC.LOW', 0)),
+                                'issues.IAC.INFO': '' if pd.isna(row.get('issues.IAC.INFO', 0)) or row.get('issues.IAC.INFO', 0) == 0 else int(row.get('issues.IAC.INFO', 0)),
+                                'issues.SECRETS.CRITICAL': '' if pd.isna(row.get('issues.SECRETS.CRITICAL', 0)) or row.get('issues.SECRETS.CRITICAL', 0) == 0 else int(row.get('issues.SECRETS.CRITICAL', 0)),
+                                'issues.SECRETS.HIGH': '' if pd.isna(row.get('issues.SECRETS.HIGH', 0)) or row.get('issues.SECRETS.HIGH', 0) == 0 else int(row.get('issues.SECRETS.HIGH', 0)),
+                                'issues.SECRETS.MEDIUM': '' if pd.isna(row.get('issues.SECRETS.MEDIUM', 0)) or row.get('issues.SECRETS.MEDIUM', 0) == 0 else int(row.get('issues.SECRETS.MEDIUM', 0)),
+                                'issues.SECRETS.LOW': '' if pd.isna(row.get('issues.SECRETS.LOW', 0)) or row.get('issues.SECRETS.LOW', 0) == 0 else int(row.get('issues.SECRETS.LOW', 0)),
+                                'issues.SECRETS.INFO': '' if pd.isna(row.get('issues.SECRETS.INFO', 0)) or row.get('issues.SECRETS.INFO', 0) == 0 else int(row.get('issues.SECRETS.INFO', 0)),
+                                'issues.SAST.CRITICAL': '' if pd.isna(row.get('issues.SAST.CRITICAL', 0)) or row.get('issues.SAST.CRITICAL', 0) == 0 else int(row.get('issues.SAST.CRITICAL', 0)),
+                                'issues.SAST.HIGH': '' if pd.isna(row.get('issues.SAST.HIGH', 0)) or row.get('issues.SAST.HIGH', 0) == 0 else int(row.get('issues.SAST.HIGH', 0)),
+                                'issues.SAST.MEDIUM': '' if pd.isna(row.get('issues.SAST.MEDIUM', 0)) or row.get('issues.SAST.MEDIUM', 0) == 0 else int(row.get('issues.SAST.MEDIUM', 0)),
+                                'issues.SAST.LOW': '' if pd.isna(row.get('issues.SAST.LOW', 0)) or row.get('issues.SAST.LOW', 0) == 0 else int(row.get('issues.SAST.LOW', 0)),
+                                'issues.SAST.INFO': '' if pd.isna(row.get('issues.SAST.INFO', 0)) or row.get('issues.SAST.INFO', 0) == 0 else int(row.get('issues.SAST.INFO', 0)),
                             })
             else:
                 data.append({
@@ -278,7 +314,6 @@ def df_to_xls(df):
                     'lastUpdated': row['lastUpdated'],
                     'provider': row['provider'],
                     'name': row['name'],
-                    'privacyLevel': row['privacyLevel'],
                     'contributorsCount': row['contributorsCount'],
                     'contributors': contributor_names,
                     'workspaceName': row['workspaceName'],
