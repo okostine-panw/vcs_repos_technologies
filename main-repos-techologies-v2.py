@@ -32,6 +32,9 @@ pd.set_option('mode.chained_assignment', None)
 
 py_filename = os.path.basename(__file__)
 
+# Make sure your instance value below which is part of the .ini filename is in the same directory 
+# Example API_config-{instance}.ini
+
 instance = 'pso'
 
 # Define file names
