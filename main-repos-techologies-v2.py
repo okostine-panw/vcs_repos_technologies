@@ -32,10 +32,10 @@ pd.set_option('mode.chained_assignment', None)
 
 py_filename = os.path.basename(__file__)
 
-# Make sure your instance value below which is part of the .ini filename is in the same directory 
+# Make sure your instance value below which is part of the .ini filename is in the same directory
 # Example API_config-{instance}.ini
 
-instance = 'pso'
+instance = 'pso' # Replace this with your cutom instance name
 
 # Define file names
 # file_name_repos = f"Code-repos-technologies-{datetime.now().strftime('%Y-%m-%dT%H-%M-%S')}.csv"
@@ -55,10 +55,6 @@ start_time = time.time()
 
 global random_number # debugging
 random_number = random.randint(1000, 9999)
-
-# Declare Dataframe columns for AWS and Azure based on columns templates in Excel file
-# global reposdfcolumns
-# reposdfcolumns = ['Supported', 'provider', 'type', 'privacyLevel', 'repositorySize', 'workspaceName', 'name', 'defaultBranch', 'categorizedTechnologies', 'Technology', 'percentage', 'detectedDate', 'severitySum', 'issues.type', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO', 'branchName', 'contributorsCount', 'contributors.name-contributionsCounts', 'totalCommitsCount', 'currWeeklyCommits', 'lastUpdated', 'isArchived', 'url']
 
 
 # Define a function to load API configuration from an INI file
@@ -188,7 +184,7 @@ def df_to_xls(df):
                                    'provider', 'name',
                                    'workspaceName', 'category', 'technology', 'detectedDate', 'percentage',
                                    'issues.SCA.TOTAL', 'issues.IAC.TOTAL', 'issues.SECRETS.TOTAL', 'issues.SAST.TOTAL',
-                                   'repositorySize', 'url', 'lastUpdated', 'isArchived', 'Supported',
+                                   'repositorySize', 'url', 'ciFiles', 'lastUpdated', 'isArchived', 'Supported',
                                    'issues.SCA.CRITICAL', 'issues.SCA.HIGH', 'issues.SCA.MEDIUM', 'issues.SCA.LOW', 'issues.SCA.INFO',
                                    'issues.IAC.CRITICAL', 'issues.IAC.HIGH', 'issues.IAC.MEDIUM', 'issues.IAC.LOW', 'issues.IAC.INFO',
                                    'issues.SECRETS.CRITICAL', 'issues.SECRETS.HIGH', 'issues.SECRETS.MEDIUM', 'issues.SECRETS.LOW', 'issues.SECRETS.INFO',
@@ -278,6 +274,7 @@ def df_to_xls(df):
                                 'issues.SAST.TOTAL': '' if row.get('issues.IAC.TOTAL') == 0 else int(row.get('issues.SAST.TOTAL')) if pd.notna(row.get('issues.SAST.TOTAL')) else '',
                                 'repositorySize': round(row['repositorySize'], 2),  # Round to 2 decimal digits
                                 'url': row['url'],
+                                'ciFiles': row['ciFiles'],
                                 'isArchived': row['isArchived'],
                                 'defaultBranch': row['defaultBranch'],
                                 'totalCommitsCount': '' if pd.isna(row['totalCommitsCount']) or row['totalCommitsCount'] == 0 else int(row['totalCommitsCount']),
@@ -313,6 +310,7 @@ def df_to_xls(df):
                     'isArchived': row['isArchived'],
                     'defaultBranch': row['defaultBranch'],
                     'url': row['url'],
+                    'ciFiles': row['ciFiles'],
                     'repositorySize': round(row['repositorySize'], 2),  # Round to 2 decimal digits
                     'lastUpdated': row['lastUpdated'],
                     'provider': row['provider'],
@@ -327,6 +325,8 @@ def df_to_xls(df):
         to_xls = pd.DataFrame(data)
         # Remove rows where detectedDate is empty
         to_xls = to_xls[to_xls['detectedDate'].notna()]
+        # Convert all list-like columns to strings
+        to_xls = to_xls.apply(lambda x: x.map(lambda y: str(y) if isinstance(y, (list, dict)) else y))
         # Drop duplicates
         to_xls = to_xls.drop_duplicates()
 
